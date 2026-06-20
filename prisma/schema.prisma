@@ -1,0 +1,67 @@
+// Finance Month-End Close Workflow Tracker — Prisma schema (SQLite).
+//
+// SQLite (via Prisma) does not support native enums, so "enum-like" fields are
+// modelled as String and validated with a TS union + zod in src/lib/close.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// A single month-end close cycle (e.g. "2026-05").
+model ClosePeriod {
+  id        String      @id @default(cuid())
+  label     String      @unique // e.g. "2026-05"
+  // ClosePeriodStatus: "OPEN" | "IN_PROGRESS" | "CLOSED"
+  status    String      @default("OPEN")
+  // The "hard close" deadline the controller commits the books by.
+  deadline  DateTime
+  // When the close cycle officially starts (drives the burndown x-axis).
+  startDate DateTime
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  tasks     CloseTask[]
+}
+
+/// One task in the close checklist, owned by a person and scoped to an area.
+model CloseTask {
+  id          String      @id @default(cuid())
+  periodId    String
+  period      ClosePeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  name        String
+  // CloseArea: "Bank Recs" | "Accruals" | "Intercompany" | "Fixed Assets" | "Revenue" | "Reporting"
+  area        String
+  owner       String
+  // TaskStatus: "NOT_STARTED" | "IN_PROGRESS" | "BLOCKED" | "IN_REVIEW" | "DONE"
+  status      String      @default("NOT_STARTED")
+  dueDate     DateTime
+  // Display/order index within an area.
+  order       Int         @default(0)
+  // When status moved to DONE — used by the burndown engine.
+  completedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Self-referential dependency web via the join model below.
+  dependencies TaskDependency[] @relation("TaskDependencies")
+  dependents   TaskDependency[] @relation("DependsOnTask")
+
+  @@index([periodId])
+}
+
+/// Directed edge: `task` depends on `dependsOnTask` (must be DONE first).
+model TaskDependency {
+  id              String    @id @default(cuid())
+  taskId          String
+  dependsOnTaskId String
+  task            CloseTask @relation("TaskDependencies", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnTask   CloseTask @relation("DependsOnTask", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnTaskId])
+  @@index([taskId])
+  @@index([dependsOnTaskId])
+}
