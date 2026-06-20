@@ -6,6 +6,20 @@ The month-end close is a recurring, deadline-driven workflow: dozens of interdep
 
 The signature feature is a **pure, fully unit-tested close engine** (`src/lib/close.ts`): a task status state machine, dependency-readiness resolution, and close-progress/burndown math — zero I/O, zero framework coupling, 17 unit tests.
 
+## Screenshots
+
+**Close dashboard** — progress and days-to-deadline StatCards, the burndown chart, status breakdown, and the checklist grouped by close area.
+
+![Month-end close dashboard](docs/01-dashboard.png)
+
+**Task board** — close tasks by status with inline, valid-only transition controls.
+
+![Close task board](docs/02-board.png)
+
+**Task detail** — owner, due date, and the dependency web (what it waits on and what it blocks).
+
+![Close task detail](docs/03-task-detail.png)
+
 ## Features
 
 - **Close Dashboard** — StatCards (% complete, tasks done, overdue count, days to deadline), an inline-SVG **burndown chart** (actual remaining vs. the ideal line, stopping at "today"), a status breakdown bar, and the full checklist grouped by close area.
